@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-nativ
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useAuth, useOAuth, useSignIn } from '@clerk/clerk-expo';
+import { useAuth, useOAuth, useSignUp } from '@clerk/clerk-expo';
 
-export default function Login() {
-  const { signIn, setActive, isLoaded } = useSignIn();
+export default function Register() {
+  const { signUp, setActive, isLoaded } = useSignUp();
   const router = useRouter();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const { isSignedIn } = useAuth();
@@ -21,51 +21,50 @@ export default function Login() {
     }
   }, [isLoaded, isSignedIn, router]);
 
-  const onSignInPress = React.useCallback(async () => {
-    if (!isLoaded || !setActive) return;
-  
-    setLoading(true);
-    try {
-      const signInAttempt = await signIn.create({
-        identifier: emailAddress,
-        password,
-      });
-  
-      if (signInAttempt.status === 'complete' && setActive) {
-        await setActive({ session: signInAttempt.createdSessionId });
-        router.replace('/(tabs)'); // Redirect to '/home' after login
-      } else {
-        console.error(JSON.stringify(signInAttempt, null, 2));
+  const onSignUpPress = React.useCallback(async () => {
+      if (!isLoaded || !setActive) return;
+    
+      setLoading(true);
+      try {
+        const signUpAttempt = await signUp.create({
+            emailAddress: emailAddress,
+          password,
+        });
+    
+        if (signUpAttempt.status === 'complete' && setActive) {
+          await setActive({ session: signUpAttempt.createdSessionId });
+          router.replace('/(tabs)'); // Redirect to '/home' after login
+        } else {
+          console.error(JSON.stringify(signUpAttempt, null, 2));
+        }
+      } catch (err: any) {
+        console.error(JSON.stringify(err, null, 2));
+      } finally {
+        setLoading(false);
       }
-    } catch (err: any) {
-      console.error(JSON.stringify(err, null, 2));
-    } finally {
-      setLoading(false);
-    }
-  }, [isLoaded, setActive, emailAddress, password]);
-  
+    }, [isLoaded, setActive, emailAddress, password]);
 
-  const onGoogleSignInPress = async () => {
-    if (!setActive) return; // Ensure setActive is defined
-  
-    try {
-      const { createdSessionId } = await startOAuthFlow();
-      if (createdSessionId) {
-        await setActive({ session: createdSessionId });
-        router.replace('/(tabs)'); 
-      }
-    } catch (error) {
-      console.error('OAuth error:', error);
-    }
-  };
+    const onGoogleSignUpPress = async () => {
+        if (!setActive) return; // Ensure setActive is defined
+      
+        try {
+          const { createdSessionId } = await startOAuthFlow();
+          if (createdSessionId) {
+            await setActive({ session: createdSessionId });
+            router.replace('/(tabs)'); 
+          }
+        } catch (error) {
+          console.error('OAuth error:', error);
+        }
+    };
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Sign up to start your fitness journey</Text>
       </View>
 
       <View style={styles.form}>
@@ -95,32 +94,26 @@ export default function Login() {
         </View>
 
         <TouchableOpacity
-          style={styles.forgotPassword}
-          onPress={() => {}}>
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={styles.button}
-          onPress={onSignInPress}
+          onPress={onSignUpPress}
           disabled={loading}
           activeOpacity={0.8}>
-          <Text style={styles.buttonText}>{loading ? 'Signing In...' : 'Sign In'}</Text>
+          <Text style={styles.buttonText}>{loading ? 'Signing Up...' : 'Sign Up'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.googleButton}
-          onPress={onGoogleSignInPress}
+          onPress={onGoogleSignUpPress}
           activeOpacity={0.8}>
           <Ionicons name="logo-google" size={20} color="#fff" />
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
+          <Text style={styles.googleButtonText}>Sign Up with Google</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.createAccount}
-          onPress={() => router.push('/(auth)/register')}>
-          <Text style={styles.createAccountText}>
-            Don't have an account? <Text style={styles.createAccountTextBold}>Sign Up</Text>
+          style={styles.loginAccount}
+          onPress={() => router.push('/(auth)/login')}>
+          <Text style={styles.loginAccountText}>
+            Already have an account? <Text style={styles.loginAccountTextBold}>Login</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -167,15 +160,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#fff',
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 32,
-  },
-  forgotPasswordText: {
-    color: '#4ADE80',
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-  },
   button: {
     backgroundColor: '#4ADE80',
     height: 56,
@@ -204,15 +188,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     marginLeft: 12,
   },
-  createAccount: {
+  loginAccount: {
     alignItems: 'center',
   },
-  createAccountText: {
+  loginAccountText: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
     fontFamily: 'Inter-Regular',
   },
-  createAccountTextBold: {
+  loginAccountTextBold: {
     color: '#4ADE80',
     fontFamily: 'Inter-Bold',
   },
