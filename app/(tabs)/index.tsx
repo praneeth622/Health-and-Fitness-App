@@ -1,4 +1,7 @@
 import React from 'react';
+import { Linking } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import {
   View,
   Text,
@@ -42,6 +45,7 @@ const workoutSuggestions = [
     calories: 320,
     level: 'Advanced',
     image: 'https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?w=800',
+    url:'/(pages)/hiit' 
   },
   {
     id: 2,
@@ -50,6 +54,7 @@ const workoutSuggestions = [
     calories: 280,
     level: 'Intermediate',
     image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800',
+    url:'/(pages)/strength'
   },
 ];
 
@@ -61,6 +66,7 @@ const mindfulnessSessions = [
     duration: '10 min',
     category: 'Meditation',
     image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800',
+    url:'/(pages)/meditation'
   },
   {
     id: 2,
@@ -68,6 +74,7 @@ const mindfulnessSessions = [
     duration: '20 min',
     category: 'Yoga',
     image: 'https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=800',
+    url:'/(pages)/yoga'
   },
 ];
 
@@ -175,7 +182,7 @@ export default function Home() {
                 key={workout.id}
                 entering={FadeInRight.delay(index * 100)}
               >
-                <TouchableOpacity style={styles.workoutCard}>
+                <TouchableOpacity style={styles.workoutCard} onPress={() => router.push(workout.url)}>
                   <Image
                     source={{ uri: workout.image }}
                     style={styles.workoutImage}
@@ -217,7 +224,7 @@ export default function Home() {
                 key={session.id}
                 entering={FadeInRight.delay(index * 100)}
               >
-                <TouchableOpacity style={styles.mindfulnessCard}>
+                <TouchableOpacity style={styles.mindfulnessCard} onPress={() => router.push(session.url)}>
                   <Image
                     source={{ uri: session.image }}
                     style={styles.mindfulnessImage}
