@@ -9,6 +9,14 @@ import {
   Inter_500Medium,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { ClerkAuthProvider } from '@/contexts/ClerkProvider';
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!
+
+if (!publishableKey) {
+  throw new Error(
+    'Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env',
+  )
+}
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -36,6 +44,7 @@ export default function RootLayout() {
 
   return (
     <>
+    <ClerkAuthProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -48,6 +57,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
+      </ClerkAuthProvider>
     </>
   );
 }

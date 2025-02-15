@@ -18,6 +18,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { useUser } from '@clerk/clerk-expo';
 
 const { width } = Dimensions.get('window');
 
@@ -108,6 +109,7 @@ const rewards = [
 
 export default function Profile() {
   const scrollY = useSharedValue(0);
+  const {user} = useUser();
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -133,11 +135,11 @@ export default function Profile() {
         <View style={styles.headerContent}>
           <View style={styles.profileInfo}>
             <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800' }}
+              source={{ uri: user?.imageUrl }}
               style={styles.profileImage}
             />
             <View style={styles.profileText}>
-              <Text style={styles.profileName}>Sarah Wilson</Text>
+              <Text style={styles.profileName}>{user?.fullName}</Text>
               <Text style={styles.profileBio}>Fitness Enthusiast | Runner</Text>
             </View>
           </View>
@@ -296,9 +298,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
+    paddingTop: 30,
   },
   header: {
     height: 280,
+    paddingVertical: 24,
     justifyContent: 'flex-end',
     paddingHorizontal: 24,
     paddingBottom: 24,

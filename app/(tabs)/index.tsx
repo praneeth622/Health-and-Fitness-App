@@ -20,6 +20,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useUser } from '@clerk/clerk-expo';
 
 const { width } = Dimensions.get('window');
 
@@ -93,6 +94,7 @@ const activeChallenges = [
 
 export default function Home() {
   const scrollY = useSharedValue(0);
+  const {user} = useUser();
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -121,7 +123,7 @@ export default function Home() {
         <View style={styles.headerContent}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.greeting}>Hello Sarah 💪</Text>
+              <Text style={styles.greeting}>Hello {user?.firstName} 💪</Text>
               <Text style={styles.title}>Ready for your workout?</Text>
             </View>
             <TouchableOpacity style={styles.notificationButton}>
