@@ -15,6 +15,9 @@ import Animated, {
   FadeInDown,
   SlideInRight,
 } from 'react-native-reanimated';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../FirebaseConfig';
+import { useUser } from '@clerk/clerk-expo';
 
 const { width } = Dimensions.get('window');
 
@@ -115,14 +118,70 @@ export default function ProfileSetup() {
   const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
   const [selectedActivities, setSelectedActivities] = useState<Set<string>>(new Set());
 
-  const handleNext = () => {
+  const { user } = useUser();
+        
+  if (!user) {
+      console.error('No user found');
+      return;
+  }
+
+  const validateCurrentStep = () => {
+    switch (currentStep) {
+      case 'info':
+        return age.trim() !== '' && 
+               gender.trim() !== '' && 
+               fitnessLevel !== '';
+      case 'goals':
+        return selectedGoals.size > 0;
+      case 'activities':
+        return selectedActivities.size > 0;
+      default:
+        return false;
+    }
+  };
+
+  const handleNext = async () => {
     if (currentStep === 'info') {
       setCurrentStep('goals');
     } else if (currentStep === 'goals') {
       setCurrentStep('activities');
     } else {
-      // Handle completion
-      router.replace('/(tabs)');
+      // Handle completion and save to Firebase
+      try {
+        
+
+        // Convert Sets to Arrays
+        const goalsArray = Array.from(selectedGoals);
+        const activitiesArray = Array.from(selectedActivities);
+        console.log('Goals:', goalsArray);
+        console.log('Activities:', activitiesArray);
+        console.log("user id", user.id);
+
+        // Create user profile document
+        await setDoc(doc(db, 'Users', user.id), {
+          age: Number(age),
+          completedChallenges: [],
+          earnedPoints: 0,
+          fitnessGoals: goalsArray,
+          fitnessLevel: fitnessLevel,
+          gender: gender.toLowerCase(),
+          joinedGroups: [],
+          name: user.firstName || '',
+          preferredActivities: activitiesArray,
+          streak: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          image: user?.imageUrl || '',
+          rank: Number(0),
+          achievement : 'Just getting started',
+        });
+
+        // Navigate to main app
+        router.replace('/(tabs)');
+      } catch (error) {
+        console.error('Error saving profile:', error);
+        // You might want to show an error message to the user here
+      }
     }
   };
 
@@ -357,7 +416,11 @@ export default function ProfileSetup() {
       {/* Next Button */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.nextButton}
+          style={[
+            styles.nextButton,
+            !validateCurrentStep() && styles.disabledButton
+          ]}
+          disabled={!validateCurrentStep()}
           onPress={handleNext}>
           <Text style={styles.nextButtonText}>
             {currentStep === 'activities' ? 'Finish' : 'Next'}
@@ -571,5 +634,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Bold',
     color: '#121212',
+  },
+  disabledButton: {
+    backgroundColor: 'rgba(74,222,128,0.5)',
   },
 });

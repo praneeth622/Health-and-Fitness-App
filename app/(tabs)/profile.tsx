@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import * as Linking from 'expo-linking'
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -19,7 +20,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import { useUser } from '@clerk/clerk-expo';
+import { useClerk, useUser } from '@clerk/clerk-expo';
 
 const { width } = Dimensions.get('window');
 
@@ -111,6 +112,7 @@ const rewards = [
 export default function Profile() {
   const scrollY = useSharedValue(0);
   const {user} = useUser();
+  const { signOut } = useClerk()
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -124,6 +126,15 @@ export default function Profile() {
       opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp'),
     };
   });
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      Linking.openURL(Linking.createURL('/(auth)/login'))
+    } catch (err) {
+      console.error(JSON.stringify(err, null, 2))
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -160,9 +171,14 @@ export default function Profile() {
               <Text style={styles.statLabel}>Days Streak</Text>
             </View>
           </View>
+          <View style={styles.profileInfo}>
           <TouchableOpacity style={styles.editButton}>
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.editButton} onPress={handleSignOut}>
+            <Text style={styles.editButtonText}>Logout</Text>
+          </TouchableOpacity>
+          </View>
         </View>
       </Animated.View>
 
@@ -314,6 +330,7 @@ const styles = StyleSheet.create({
   profileInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 16,
   },
   profileImage: {
