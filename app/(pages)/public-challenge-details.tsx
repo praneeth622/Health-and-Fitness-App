@@ -21,9 +21,10 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../../FirebaseConfig';
 import { ChallengeDetails, Milestone, LeaderboardUser, Tip, PublicChallenge } from '../../types/challenge';
+import { useUser } from '@clerk/clerk-expo';
 
 const { width } = Dimensions.get('window');
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
@@ -98,10 +99,11 @@ const tips: Tip[] = [
 ];
 
 export default function PublicChallengeDetails() {
-    const { challengeId } = useLocalSearchParams();
-    const [challengeDetails, setChallengeDetails] = useState<PublicChallenge | null>(null);
-    const [isJoined, setIsJoined] = useState(false);
-    const scrollY = useSharedValue(0);
+  const { challengeId } = useLocalSearchParams();
+  const [challengeDetails, setChallengeDetails] = useState<PublicChallenge | null>(null);
+  const [isJoined, setIsJoined] = useState(false);
+  const scrollY = useSharedValue(0);
+  const { user } = useUser();
 
   useEffect(() => {
     const fetchChallengeDetails = async () => {
@@ -140,6 +142,26 @@ export default function PublicChallengeDetails() {
     }
   }, [challengeId]);
 
+  useEffect(() => {
+    const checkMembership = async () => {
+      if (!user || !challengeId) return;
+
+      try {
+        const userRef = doc(db, 'Users', user.id);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const publicChallenges = userDoc.data().publicChallenges || [];
+          setIsJoined(publicChallenges.includes(challengeId));
+        }
+      } catch (error) {
+        console.error('Error checking membership:', error);
+      }
+    };
+
+    checkMembership();
+  }, [user, challengeId]);
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
@@ -153,8 +175,81 @@ export default function PublicChallengeDetails() {
     };
   });
 
-  const handleJoinChallenge = () => {
-    setIsJoined(true);
+  const handleJoinChallenge = async () => {
+    if (!user || !challengeDetails) return;
+
+    try {
+      // Update user's publicChallenges array
+      const userRef = doc(db, 'Users', user.id);
+      await updateDoc(userRef, {
+        publicChallenges: arrayUnion(challengeId),
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update challenge's members array
+      const challengeRef = doc(db, 'PublicChallenges', challengeId as string);
+      await updateDoc(challengeRef, {
+        members: arrayUnion(user.id),
+        participants: challengeDetails.participants + 1,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update local state
+      setIsJoined(true);
+      setChallengeDetails({
+        ...challengeDetails,
+        participants: challengeDetails.participants + 1
+      });
+
+      // Optional: Show success message
+      console.log('Successfully joined challenge!');
+    } catch (error) {
+      console.error('Error joining challenge:', error);
+      setIsJoined(false);
+    }
+  };
+
+  const handleLeaveChallenge = async () => {
+    if (!user || !challengeDetails) return;
+
+    try {
+      // Remove challenge from user's publicChallenges
+      const userRef = doc(db, 'Users', user.id);
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        const currentChallenges = userDoc.data().publicChallenges || [];
+        await updateDoc(userRef, {
+          publicChallenges: currentChallenges.filter((id: string) => id !== challengeId),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Remove user from challenge's members
+      const challengeRef = doc(db, 'PublicChallenges', challengeId as string);
+      const challengeDoc = await getDoc(challengeRef);
+      
+      if (challengeDoc.exists()) {
+        const currentMembers = challengeDoc.data().members || [];
+        await updateDoc(challengeRef, {
+          members: currentMembers.filter((id: string) => id !== user.id),
+          participants: Math.max(0, challengeDetails.participants - 1),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Update local state
+      setIsJoined(false);
+      setChallengeDetails({
+        ...challengeDetails,
+        participants: Math.max(0, challengeDetails.participants - 1)
+      });
+
+      // Optional: Show success message
+      console.log('Successfully left challenge!');
+    } catch (error) {
+      console.error('Error leaving challenge:', error);
+    }
   };
 
   // Add loading state check
@@ -328,10 +423,10 @@ export default function PublicChallengeDetails() {
         style={styles.bottomContainer}>
         <TouchableOpacity
           style={[styles.joinButton, isJoined && styles.joinedButton]}
-          onPress={handleJoinChallenge}
-          disabled={isJoined}>
+          onPress={() => isJoined ? handleLeaveChallenge() : handleJoinChallenge()}
+          disabled={!user}>
           <Text style={[styles.joinButtonText, isJoined && styles.joinedButtonText]}>
-            {isJoined ? 'Joined Challenge' : 'Join Challenge'}
+            {isJoined ? 'Leave Challenge' : 'Join Challenge'}
           </Text>
         </TouchableOpacity>
       </Animated.View>

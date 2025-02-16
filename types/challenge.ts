@@ -61,5 +61,43 @@ export interface GroupChallenge {
   targetDistance: number;
   daysLeft: number;
   progress: number;
+}
 
+export interface UserRewards {
+  points: number;
+  redeemableRewards: RewardItem[];
+  earnedRewards: EarnedReward[];
+  sponsorshipProgress: SponsorshipProgress[];
+}
+
+export interface RewardItem {
+  id: string;
+  title: string;
+  description: string;
+  pointsCost: number;
+  type: 'discount' | 'subscription' | 'product';
+  value: string;
+  brand: string;
+  image: string;
+  expiryDate?: string;
+}
+
+export interface EarnedReward {
+  id: string;
+  rewardId: string;
+  dateEarned: string;
+  used: boolean;
+  dateUsed?: string;
+}
+
+export interface SponsorshipProgress {
+  challengeId: string;
+  progress: number;
+  milestones: SponsorshipMilestone[];
+}
+
+export interface SponsorshipMilestone {
+  target: number;
+  reward: string;
+  achieved: boolean;
 }

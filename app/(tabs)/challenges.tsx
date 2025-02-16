@@ -375,8 +375,8 @@ export default function Challenges() {
         {/* Personal Challenges */}
         <View style={[styles.section, styles.lastSection]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Your Active Challenges</Text>
-            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(pages)/active-challenges')}>
+            <Text style={styles.sectionTitle}>Your Personal Challenges</Text>
+            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(pages)/personal-challenges')}>
               <Text style={styles.seeAllText}>See All</Text>
               <Ionicons name="arrow-forward" size={16} color="#4ADE80" />
             </TouchableOpacity>
