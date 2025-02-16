@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../FirebaseConfig';
 
 const { width } = Dimensions.get('window');
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
@@ -51,32 +53,14 @@ const benefits = [
   },
 ];
 
-const sponsoredChallenges = [
-  {
-    id: 1,
-    title: 'Ultra-Marathon Challenge',
-    sponsor: 'Adidas',
-    goal: 'Complete 100KM in 30 days',
-    reward: 'Win Adidas sports gear!',
-    image: 'https://images.unsplash.com/photo-1539794830467-1f1755804d13?w=800',
-  },
-  {
-    id: 2,
-    title: 'Hydration Challenge',
-    sponsor: 'Gatorade',
-    goal: 'Drink 2L water daily for 14 days',
-    reward: 'Free energy drink packs',
-    image: 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=800',
-  },
-  {
-    id: 3,
-    title: 'Strength Challenge',
-    sponsor: 'Gymshark',
-    goal: 'Increase weights weekly for a month',
-    reward: 'Exclusive merchandise',
-    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800',
-  },
-];
+interface SponsoredChallenge {
+  id: string;
+  goal: string;
+  image: string;
+  title: string;
+  reward: string;
+  sponsor: string;
+}
 
 const successStories = [
   {
@@ -99,6 +83,7 @@ const successStories = [
 
 export default function SponsoredChallenges() {
   const scrollY = useSharedValue(0);
+  const [sponsoredChallenges, setSponsoredChallenges] = useState<SponsoredChallenge[]>([]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -112,6 +97,30 @@ export default function SponsoredChallenges() {
       opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp'),
     };
   });
+
+  useEffect(() => {
+    const fetchSponsoredChallenges = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "SponsoredChallenges"));
+        const challengesData: SponsoredChallenge[] = [];
+        querySnapshot.forEach((doc) => {
+          challengesData.push({
+            id: doc.id,
+            goal: doc.data().goal,
+            image: doc.data().image,
+            title: doc.data().title, 
+            reward: doc.data().reward,
+            sponsor: doc.data().sponsor
+          });
+        });
+        setSponsoredChallenges(challengesData);
+      } catch (error) {
+        console.error("Error fetching sponsored challenges:", error);
+      }
+    };
+
+    fetchSponsoredChallenges();
+  }, []);
 
   return (
     <View style={styles.container}>

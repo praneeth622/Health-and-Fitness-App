@@ -10,9 +10,9 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          position: 'absolute',
+          position: 'relative',
           bottom: Platform.OS === 'ios' ? 24 : 16,
-          left: 24,
+          left: 0,
           right: 24,
           height: 50,
           borderRadius: 32,
