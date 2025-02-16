@@ -27,103 +27,16 @@ const { width } = Dimensions.get('window');
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
-const publicChallenges = [
-  {
-    id: 1,
-    title: '10K Steps Daily',
-    sponsor: 'Nike',
-    reward: 'Win running shoes!',
-    duration: '30 Days',
-    participants: 1234,
-    progress: 0.4,
-    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=800',
-  },
-  {
-    id: 2,
-    title: '100 Push-Ups Challenge',
-    duration: '15 Days',
-    reward: 'Free Premium Membership',
-    participants: 856,
-    progress: 0.25,
-    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800',
-  },
-  {
-    id: 3,
-    title: 'Run 50KM in a Month',
-    duration: '30 Days',
-    reward: 'Gold Badge',
-    participants: 567,
-    progress: 0.6,
-    image: 'https://images.unsplash.com/photo-1486218119243-13883505764c?w=800',
-  },
-];
-
-const sponsoredChallenges = [
-  {
-    id: 1,
-    title: 'Ultra-Marathon Challenge',
-    sponsor: 'Adidas',
-    reward: 'Win Adidas sports gear!',
-    goal: 'Complete 100KM in 30 days',
-    image: 'https://images.unsplash.com/photo-1539794830467-1f1755804d13?w=800'
-  },
-  {
-    id: 2,
-    title: 'Hydration Challenge',
-    sponsor: 'Gatorade',
-    reward: 'Free energy drink packs',
-    goal: 'Drink 2L water daily for 14 days',
-    image: 'https://images.unsplash.com/photo-1523362628745-0c100150b504?w=800',
-  },
-  {
-    id: 3,
-    title: 'Strength Challenge',
-    sponsor: 'Gymshark',
-    reward: 'Exclusive merchandise',
-    goal: 'Increase weights weekly for a month',
-    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800',
-  },
-];
-
-const groupChallenges = [
-  {
-    id: 1,
-    title: 'Strength Battle',
-    group: 'Gym Warriors',
-    members: 12,
-    description: 'Who lifts the heaviest?',
-    duration: '7 Days',
-    image: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=800',
-  },
-  {
-    id: 2,
-    title: 'Steps Showdown',
-    group: 'Running Club',
-    members: 8,
-    description: 'Most steps in a week!',
-    duration: '7 Days',
-    image: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=800',
-  },
-];
-
-const personalChallenges = [
-  {
-    id: 1,
-    title: '5K Run Every Weekend',
-    progress: 0.43,
-    currentDay: 3,
-    totalDays: 7,
-    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=800',
-  },
-  {
-    id: 2,
-    title: '30-Day Abs Workout',
-    progress: 0.4,
-    currentDay: 12,
-    totalDays: 30,
-    image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800',
-  },
-];
+interface PublicChallenge {
+  id: string;
+  title: string;
+  sponsor: string;
+  reward: string;
+  duration: string;
+  participants: number;
+  progress: number;
+  image: string;
+}
 
 interface SponsoredChallenge {
   id: string;
@@ -134,10 +47,34 @@ interface SponsoredChallenge {
   sponsor: string;
 }
 
+// Add the interface for group challenges
+interface GroupChallenge {
+  id: string;
+  title: string;
+  group: string;
+  members: any[];
+  description: string;
+  duration: string;
+  image: string;
+}
+
+// Add interface for personal challenges
+interface PersonalChallenge {
+  id: string;
+  title: string;
+  progress: number;
+  currentDay: number;
+  totalDays: number;
+  image: string;
+}
+
 export default function Challenges() {
   const scrollY = useSharedValue(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [sponsoredChallenges, setSponsoredChallenges] = useState<SponsoredChallenge[]>([]);
+  const [groupChallenges, setGroupChallenges] = useState<GroupChallenge[]>([]);
+  const [personalChallenges, setPersonalChallenges] = useState<PersonalChallenge[]>([]);
+  const [publicChallenges, setPublicChallenges] = useState<PublicChallenge[]>([]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -162,7 +99,7 @@ export default function Challenges() {
             id: doc.id,
             goal: doc.data().goal,
             image: doc.data().image,
-            title: doc.data().name, // Note: Firestore field is 'name' but we use 'title'
+            title: doc.data().title, 
             reward: doc.data().reward,
             sponsor: doc.data().sponsor
           });
@@ -174,6 +111,84 @@ export default function Challenges() {
     };
   
     fetchSponsoredChallenges();
+  }, []);
+
+  // Add new useEffect for fetching group challenges
+  useEffect(() => {
+    const fetchGroupChallenges = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "GroupChallenges"));
+        const challengesData: GroupChallenge[] = [];
+        querySnapshot.forEach((doc) => {
+          challengesData.push({
+            id: doc.id,
+            title: doc.data().title,
+            group: doc.data().group,
+            members: doc.data().members,
+            description: doc.data().description,
+            duration: doc.data().duration,
+            image: doc.data().image
+          });
+        });
+        setGroupChallenges(challengesData);
+      } catch (error) {
+        console.error("Error fetching group challenges:", error);
+      }
+    };
+
+    fetchGroupChallenges();
+  }, []);
+
+  // Add new useEffect for fetching personal challenges
+  useEffect(() => {
+    const fetchPersonalChallenges = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "PersonalChallenges"));
+        const challengesData: PersonalChallenge[] = [];
+        querySnapshot.forEach((doc) => {
+          challengesData.push({
+            id: doc.id,
+            title: doc.data().title,
+            progress: doc.data().progress,
+            currentDay: doc.data().currentDay,
+            totalDays: doc.data().totalDays,
+            image: doc.data().image
+          });
+        });
+        setPersonalChallenges(challengesData);
+      } catch (error) {
+        console.error("Error fetching personal challenges:", error);
+      }
+    };
+
+    fetchPersonalChallenges();
+  }, []);
+
+  // Add new useEffect for fetching public challenges
+  useEffect(() => {
+    const fetchPublicChallenges = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "PublicChallenges"));
+        const challengesData: PublicChallenge[] = [];
+        querySnapshot.forEach((doc) => {
+          challengesData.push({
+            id: doc.id,
+            title: doc.data().title,
+            sponsor: doc.data().sponsor,
+            reward: doc.data().reward,
+            duration: doc.data().duration,
+            participants: doc.data().participants,
+            progress: doc.data().progress,
+            image: doc.data().image
+          });
+        });
+        setPublicChallenges(challengesData);
+      } catch (error) {
+        console.error("Error fetching public challenges:", error);
+      }
+    };
+
+    fetchPublicChallenges();
   }, []);
 
   return (
@@ -323,7 +338,7 @@ export default function Challenges() {
                       <View style={styles.groupStat}>
                         <Ionicons name="people" size={16} color="#4ADE80" />
                         <Text style={styles.groupStatText}>
-                          {challenge.members} members
+                          {challenge.members.length} members
                         </Text>
                       </View>
                       <View style={styles.groupStat}>

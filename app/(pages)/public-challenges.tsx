@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,9 +20,35 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../FirebaseConfig';
 
 const { width } = Dimensions.get('window');
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+
+interface Benefit {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+}
+
+interface TrendingChallenge {
+  id: string;
+  title: string;
+  duration: string;
+  participants: number;
+  progress: number;
+  image: string;
+}
+
+interface LeaderboardUser {
+  id: string;
+  name: string;
+  achievement: string;
+  rank: number;
+  image: string;
+}
 
 const benefits = [
   {
@@ -51,59 +77,63 @@ const benefits = [
   },
 ];
 
-const trendingChallenges = [
-  {
-    id: 1,
-    title: '30-Day 10K Steps',
-    duration: '30 Days',
-    participants: 1234,
-    progress: 0.7,
-    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=800',
-  },
-  {
-    id: 2,
-    title: '100 Push-Ups Daily',
-    duration: '21 Days',
-    participants: 856,
-    progress: 0.4,
-    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800',
-  },
-  {
-    id: 3,
-    title: 'Cycling 100KM',
-    duration: '30 Days',
-    participants: 567,
-    progress: 0.6,
-    image: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=800',
-  },
-];
 
-const leaderboard = [
-  {
-    id: 1,
-    name: 'Alex',
-    achievement: '300K steps completed',
-    rank: 1,
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=800',
-  },
-  {
-    id: 2,
-    name: 'Sarah',
-    achievement: '290K steps',
-    rank: 2,
-    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800',
-  },
-  {
-    id: 3,
-    name: 'David',
-    achievement: '275K steps',
-    rank: 3,
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800',
-  },
-];
 
 export default function PublicChallenges() {
-  const scrollY = useSharedValue(0);
+  const scrollY = useSharedValue(0);   
+  const [trendingChallenges, setTrendingChallenges] = useState<TrendingChallenge[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+
+
+  // Fetch trending challenges
+  useEffect(() => {
+    const fetchTrendingChallenges = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "PublicChallenges"));
+        const challengesData: TrendingChallenge[] = [];
+        querySnapshot.forEach((doc) => {
+          challengesData.push({
+            id: doc.id,
+            title: doc.data().title,
+            duration: doc.data().duration,
+            participants: doc.data().participants,
+            progress: doc.data().progress,
+            image: doc.data().image
+          });
+        });
+        setTrendingChallenges(challengesData);
+      } catch (error) {
+        console.error("Error fetching trending challenges:", error);
+      }
+    };
+
+    fetchTrendingChallenges();
+  }, []);
+
+  // Fetch leaderboard
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "Users"));
+        const leaderboardData: LeaderboardUser[] = [];
+        querySnapshot.forEach((doc) => {
+          leaderboardData.push({
+            id: doc.id,
+            name: doc.data().name,
+            achievement: doc.data().achievement,
+            rank: doc.data().rank,
+            image: doc.data().image
+          });
+        });
+        console.log(leaderboardData);
+        setLeaderboard(leaderboardData);
+      } catch (error) {
+        console.error("Error fetching leaderboard:", error);
+      }
+    };
+
+    fetchLeaderboard();
+  }, []);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -237,9 +267,9 @@ export default function PublicChallenges() {
               entering={FadeInDown.delay(index * 100)}>
               <View style={styles.leaderboardCard}>
                 <View style={styles.rankBadge}>
-                  <Text style={styles.rankText}>#{user.rank}</Text>
+                  <Text style={styles.rankText}>#{user?.rank}</Text>
                 </View>
-                <Image source={{ uri: user.image }} style={styles.userImage} />
+                <Image source={{ uri: user?.image }} style={styles.userImage} />
                 <View style={styles.userInfo}>
                   <Text style={styles.userName}>{user.name}</Text>
                   <Text style={styles.userAchievement}>

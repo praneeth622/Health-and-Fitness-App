@@ -33,7 +33,7 @@ export default function Register() {
     
         if (signUpAttempt.status === 'complete' && setActive) {
           await setActive({ session: signUpAttempt.createdSessionId });
-          router.replace('/(tabs)'); // Redirect to '/home' after login
+          router.replace('/(pages)/profile-setup'); // Redirect to '/home' after login
         } else {
           console.error(JSON.stringify(signUpAttempt, null, 2));
         }
