@@ -27,6 +27,32 @@ import { Milestone, LeaderboardUser } from '@/types/challenge';
 // Move this inside the component to ensure it's defined
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
+const benefits = [
+  {
+    id: 1,
+    title: 'Burns more calories',
+    description: 'Maximize fat burn in less time',
+    icon: 'flame',
+  },
+  {
+    id: 2,
+    title: 'Improves VO2 max',
+    description: 'Enhance oxygen capacity',
+    icon: 'fitness',
+  },
+  {
+    id: 3,
+    title: 'Boosts metabolism',
+    description: 'EPOC effect for hours after',
+    icon: 'trending-up',
+  },
+  {
+    id: 4,
+    title: 'Heart health',
+    description: 'Strengthen cardiovascular system',
+    icon: 'heart',
+  },
+];
 export default function PublicChallenges() {
   // Get window width inside the component
   const windowWidth = Dimensions.get('window').width;

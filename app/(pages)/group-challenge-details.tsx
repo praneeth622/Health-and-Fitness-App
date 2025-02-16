@@ -21,9 +21,10 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../../FirebaseConfig';
 import { ChallengeDetails, Milestone, LeaderboardUser, Tip, PublicChallenge, GroupChallenge } from '../../types/challenge';
+import { useUser } from '@clerk/clerk-expo';
 
 const { width } = Dimensions.get('window');
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
@@ -97,63 +98,156 @@ const tips: Tip[] = [
   },
 ];
 export default function GroupChallengeDetails() {
-    const { challengeId } = useLocalSearchParams();
-    const [challengeDetails, setChallengeDetails] = useState<GroupChallenge | null>(null);
-    const [isJoined, setIsJoined] = useState(false);
-    const scrollY = useSharedValue(0);
-  
-    useEffect(() => {
-      const fetchChallengeDetails = async () => {
-        try {
-          const docRef = doc(db, "GroupChallenges", challengeId as string);
-          const docSnap = await getDoc(docRef);
-          
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setChallengeDetails({
-              id: docSnap.id,
-              title: data.name, // Changed from title to name
-              group: data.group,
-              members: data.members || [],
-              description: data.description,
-              duration: data.duration,
-              image: data.image
-            } as GroupChallenge);
-          } else {
-            console.log("No such challenge!");
-            router.back();
-          }
-        } catch (error) {
-          console.error("Error fetching challenge details:", error);
+  const { challengeId } = useLocalSearchParams();
+  const [challengeDetails, setChallengeDetails] = useState<GroupChallenge | null>(null);
+  const [isJoined, setIsJoined] = useState(false);
+  const scrollY = useSharedValue(0);
+  const { user } = useUser();
+
+  // Move all useEffect hooks to the top level, before any conditional logic
+  useEffect(() => {
+    const fetchChallengeDetails = async () => {
+      try {
+        const docRef = doc(db, "GroupChallenges", challengeId as string);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setChallengeDetails({
+            id: docSnap.id,
+            title: data.name,
+            group: data.group,
+            members: data.members || [],
+            description: data.description,
+            duration: data.duration,
+            image: data.image
+          } as GroupChallenge);
+        } else {
+          console.log("No such challenge!");
           router.back();
         }
-      };
-  
-      if (challengeId) {
-        fetchChallengeDetails();
+      } catch (error) {
+        console.error("Error fetching challenge details:", error);
+        router.back();
       }
-    }, [challengeId]);
-  
-    const scrollHandler = useAnimatedScrollHandler({
-      onScroll: (event) => {
-        scrollY.value = event.contentOffset.y;
-      },
-    });
-  
-    const headerStyle = useAnimatedStyle(() => {
-      return {
-        height: interpolate(scrollY.value, [0, 100], [300, 200], 'clamp'),
-        opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp'),
-      };
-    });
-  
-    if (!challengeDetails) {
-      return (
-        <View style={styles.container}>
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
-      );
+    };
+
+    if (challengeId) {
+      fetchChallengeDetails();
     }
+  }, [challengeId]);
+
+  // Check membership useEffect
+  useEffect(() => {
+    const checkMembership = async () => {
+      if (!user || !challengeId) return;
+
+      try {
+        const userRef = doc(db, 'Users', user.id);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const joinedGroups = userDoc.data().joinedGroups || [];
+          setIsJoined(joinedGroups.includes(challengeId));
+        }
+      } catch (error) {
+        console.error('Error checking membership:', error);
+      }
+    };
+
+    checkMembership();
+  }, [user, challengeId]);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const headerStyle = useAnimatedStyle(() => {
+    return {
+      height: interpolate(scrollY.value, [0, 100], [300, 200], 'clamp'),
+      opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp'),
+    };
+  });
+
+  const handleJoinGroup = async () => {
+    if (!user || !challengeDetails) return;
+
+    try {
+      // Update user's joinedGroups
+      const userRef = doc(db, 'Users', user.id);
+      await updateDoc(userRef, {
+        joinedGroups: arrayUnion(challengeId),
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update group's members
+      const groupRef = doc(db, 'GroupChallenges', challengeId as string);
+      await updateDoc(groupRef, {
+        members: arrayUnion(user.id),
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update local state
+      setIsJoined(true);
+
+      // Optional: Show success message
+      console.log('Successfully joined group!');
+    } catch (error) {
+      console.error('Error joining group:', error);
+      // Optional: Show error message to user
+      setIsJoined(false);
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!user || !challengeDetails) return;
+
+    try {
+      // Remove group from user's joinedGroups
+      const userRef = doc(db, 'Users', user.id);
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        const currentGroups = userDoc.data().joinedGroups || [];
+        await updateDoc(userRef, {
+          joinedGroups: currentGroups.filter((id: string) => id !== challengeId),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Remove user from group's members
+      const groupRef = doc(db, 'GroupChallenges', challengeId as string);
+      const groupDoc = await getDoc(groupRef);
+      
+      if (groupDoc.exists()) {
+        const currentMembers = groupDoc.data().members || [];
+        await updateDoc(groupRef, {
+          members: currentMembers.filter((id: string) => id !== user.id),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Update local state
+      setIsJoined(false);
+
+      // Optional: Show success message
+      console.log('Successfully left group!');
+    } catch (error) {
+      console.error('Error leaving group:', error);
+      // Optional: Show error message to user
+    }
+  };
+
+  // Loading state check after all hooks
+  if (!challengeDetails) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -328,10 +422,10 @@ export default function GroupChallengeDetails() {
         style={styles.bottomContainer}>
         <TouchableOpacity
           style={[styles.joinButton, isJoined && styles.joinedButton]}
-          onPress={() => setIsJoined(!isJoined)}
-          disabled={isJoined}>
+          onPress={() => isJoined ? handleLeaveGroup() : handleJoinGroup()}
+          disabled={!user}>
           <Text style={[styles.joinButtonText, isJoined && styles.joinedButtonText]}>
-            {isJoined ? 'Joined Group' : 'Join Group'}
+            {isJoined ? 'Leave Group' : 'Join Group'}
           </Text>
         </TouchableOpacity>
       </Animated.View>
