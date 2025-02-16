@@ -10,6 +10,7 @@ import {
   Dimensions,
   TextInput,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { db } from '../../FirebaseConfig';
 import { collection, getDocs } from 'firebase/firestore';
@@ -22,6 +23,8 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 
 const { width } = Dimensions.get('window');
 
@@ -37,7 +40,10 @@ interface PublicChallenge {
   progress: number;
   image: string;
 }
-
+export type RootStackParamList = {
+  'page-details': { challengeId: string };
+};
+type NavigationProp = StackNavigationProp<RootStackParamList, 'page-details'>;
 
 interface SponsoredChallenge {
   id: string;
@@ -76,6 +82,7 @@ export default function Challenges() {
   const [groupChallenges, setGroupChallenges] = useState<GroupChallenge[]>([]);
   const [personalChallenges, setPersonalChallenges] = useState<PersonalChallenge[]>([]);
   const [publicChallenges, setPublicChallenges] = useState<PublicChallenge[]>([]);
+  const navigation = useNavigation<NavigationProp>();
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -241,7 +248,9 @@ export default function Challenges() {
               <Animated.View
                 key={challenge.id}
                 entering={FadeInRight.delay(index * 100)}>
-                <TouchableOpacity style={styles.challengeCard}>
+                <TouchableOpacity 
+                  style={styles.challengeCard}
+                  onPress={() => router.push(`/(pages)/public-challenge-details?challengeId=${challenge.id}`)}>
                   <Image source={{ uri: challenge.image }} style={styles.challengeImage} />
                   <View style={styles.challengeOverlay}>
                     <View style={styles.challengeBadge}>
@@ -296,7 +305,9 @@ export default function Challenges() {
             <Animated.View
               key={challenge.id}
               entering={FadeInDown.delay(index * 100)}>
-              <TouchableOpacity style={styles.sponsoredCard} onPress={() => router.push('/(pages)/page-details')}>
+              <TouchableOpacity 
+                style={styles.sponsoredCard} 
+                onPress={() => router.push(`/(pages)/page-details?challengeId=${challenge.id}`)}>
                 <Image source={{ uri: challenge.image }} style={styles.sponsoredImage} />
                 <View style={styles.sponsoredInfo}>
                   <View>
@@ -330,7 +341,9 @@ export default function Challenges() {
               <Animated.View
                 key={challenge.id}
                 entering={FadeInRight.delay(index * 100)}>
-                <TouchableOpacity style={styles.groupChallengeCard}>
+                <TouchableOpacity 
+                  style={styles.groupChallengeCard}
+                  onPress={() => router.push(`/(pages)/group-challenge-details?challengeId=${challenge.id}`)}>
                   <Image source={{ uri: challenge.image }} style={styles.groupChallengeImage} />
                   <View style={styles.groupChallengeInfo}>
                     <Text style={styles.groupChallengeTitle}>{challenge.title}</Text>

@@ -22,76 +22,28 @@ import Animated, {
 } from 'react-native-reanimated';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../FirebaseConfig';
+import { Milestone, LeaderboardUser } from '@/types/challenge';
 
-const { width } = Dimensions.get('window');
+// Move this inside the component to ensure it's defined
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
-interface Benefit {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-}
-
-interface TrendingChallenge {
-  id: string;
-  title: string;
-  duration: string;
-  participants: number;
-  progress: number;
-  image: string;
-}
-
-interface LeaderboardUser {
-  id: string;
-  name: string;
-  achievement: string;
-  rank: number;
-  image: string;
-}
-
-const benefits = [
-  {
-    id: 1,
-    title: 'Global Community',
-    description: 'Compete with users worldwide',
-    icon: 'globe',
-  },
-  {
-    id: 2,
-    title: 'Track Progress',
-    description: 'Monitor your achievements',
-    icon: 'trending-up',
-  },
-  {
-    id: 3,
-    title: 'Win Rewards',
-    description: 'Earn badges & points',
-    icon: 'trophy',
-  },
-  {
-    id: 4,
-    title: 'Stay Motivated',
-    description: 'Achieve goals together',
-    icon: 'flame',
-  },
-];
-
-
-
 export default function PublicChallenges() {
+  // Get window width inside the component
+  const windowWidth = Dimensions.get('window').width;
+  
   const scrollY = useSharedValue(0);   
   const [trendingChallenges, setTrendingChallenges] = useState<TrendingChallenge[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-
-  // Fetch trending challenges
+  // Fetch data on component mount
   useEffect(() => {
-    const fetchTrendingChallenges = async () => {
+    const fetchData = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "PublicChallenges"));
+        // Fetch trending challenges
+        const challengesSnapshot = await getDocs(collection(db, "PublicChallenges"));
         const challengesData: TrendingChallenge[] = [];
-        querySnapshot.forEach((doc) => {
+        challengesSnapshot.forEach((doc) => {
           challengesData.push({
             id: doc.id,
             title: doc.data().title,
@@ -102,21 +54,11 @@ export default function PublicChallenges() {
           });
         });
         setTrendingChallenges(challengesData);
-      } catch (error) {
-        console.error("Error fetching trending challenges:", error);
-      }
-    };
 
-    fetchTrendingChallenges();
-  }, []);
-
-  // Fetch leaderboard
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "Users"));
+        // Fetch leaderboard
+        const leaderboardSnapshot = await getDocs(collection(db, "Users"));
         const leaderboardData: LeaderboardUser[] = [];
-        querySnapshot.forEach((doc) => {
+        leaderboardSnapshot.forEach((doc) => {
           leaderboardData.push({
             id: doc.id,
             name: doc.data().name,
@@ -125,14 +67,15 @@ export default function PublicChallenges() {
             image: doc.data().image
           });
         });
-        console.log(leaderboardData);
-        setLeaderboard(leaderboardData);
+        setLeaderboardData(leaderboardData);
       } catch (error) {
-        console.error("Error fetching leaderboard:", error);
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchLeaderboard();
+    fetchData();
   }, []);
 
   const scrollHandler = useAnimatedScrollHandler({
@@ -147,6 +90,14 @@ export default function PublicChallenges() {
       opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp'),
     };
   });
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -261,7 +212,7 @@ export default function PublicChallenges() {
         {/* Leaderboard Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Global Leaderboard</Text>
-          {leaderboard.map((user, index) => (
+          {leaderboardData.map((user, index) => (
             <Animated.View
               key={user.id}
               entering={FadeInDown.delay(index * 100)}>
@@ -295,6 +246,7 @@ export default function PublicChallenges() {
   );
 }
 
+// Update styles to use windowWidth
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -366,7 +318,7 @@ const styles = StyleSheet.create({
     color: '#4ADE80',
   },
   benefitCard: {
-    width: width * 0.6,
+    width: Dimensions.get('window').width * 0.6,
     backgroundColor: '#1E1E1E',
     borderRadius: 16,
     padding: 16,
@@ -500,5 +452,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Bold',
     color: '#121212',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
