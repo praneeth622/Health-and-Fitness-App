@@ -257,7 +257,7 @@ export default function Home() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Active Challenges 🏆</Text>
             <TouchableOpacity>
-              <Text style={styles.seeAll}>See all</Text>
+              <Text style={styles.seeAll} onPress={() => router.push('/(pages)/active-challenges')}>See all</Text>
             </TouchableOpacity>
           </View>
           {activeChallenges.map((challenge, index) => (

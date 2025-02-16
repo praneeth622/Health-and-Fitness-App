@@ -1,4 +1,5 @@
 import React from 'react';
+import { router } from 'expo-router';
 import {
   View,
   Text,
@@ -209,7 +210,7 @@ export default function Discover() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Active Challenges</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
+            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(pages)/active-challenges')}>
               <Text style={styles.seeAllText}>See All</Text>
               <Ionicons name="arrow-forward" size={16} color="#4ADE80" />
             </TouchableOpacity>

@@ -51,7 +51,7 @@ export default function Register() {
           const { createdSessionId } = await startOAuthFlow();
           if (createdSessionId) {
             await setActive({ session: createdSessionId });
-            router.replace('/(tabs)'); 
+            router.replace('/(pages)/profile-setup'); 
           }
         } catch (error) {
           console.error('OAuth error:', error);

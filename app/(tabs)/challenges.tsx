@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { router } from 'expo-router';
 import {
   View,
   Text,
@@ -62,7 +63,7 @@ const sponsoredChallenges = [
     sponsor: 'Adidas',
     reward: 'Win Adidas sports gear!',
     goal: 'Complete 100KM in 30 days',
-    image: 'https://images.unsplash.com/photo-1539794830467-1f1755804d13?w=800',
+    image: 'https://images.unsplash.com/photo-1539794830467-1f1755804d13?w=800'
   },
   {
     id: 2,
@@ -178,7 +179,7 @@ export default function Challenges() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Public Challenges</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
+            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(pages)/public-challenges')}>
               <Text style={styles.seeAllText}>See All</Text>
               <Ionicons name="arrow-forward" size={16} color="#4ADE80" />
             </TouchableOpacity>
@@ -234,7 +235,7 @@ export default function Challenges() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Sponsored Challenges</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
+            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(pages)/sponsored-challenges')}>
               <Text style={styles.seeAllText}>See All</Text>
               <Ionicons name="arrow-forward" size={16} color="#4ADE80" />
             </TouchableOpacity>
@@ -310,8 +311,8 @@ export default function Challenges() {
         <View style={[styles.section, styles.lastSection]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Your Active Challenges</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
-              <Text style={styles.seeAllText}>History</Text>
+            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(pages)/active-challenges')}>
+              <Text style={styles.seeAllText}>See All</Text>
               <Ionicons name="arrow-forward" size={16} color="#4ADE80" />
             </TouchableOpacity>
           </View>
