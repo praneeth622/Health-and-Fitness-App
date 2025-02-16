@@ -14,7 +14,7 @@ export default function TabLayout() {
           bottom: Platform.OS === 'ios' ? 24 : 16,
           left: 24,
           right: 24,
-          height: 64,
+          height: 50,
           borderRadius: 32,
           backgroundColor: Platform.OS === 'ios' ? 'rgba(18, 18, 18, 0.7)' : '#121212',
           borderTopWidth: 0,
@@ -75,6 +75,14 @@ export default function TabLayout() {
         options={{
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="person" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="challenges"
+        options={{
+          tabBarIcon: ({ size, color }) => (
+            <Ionicons name="walk" size={24} color={color} />
           ),
         }}
       />
