@@ -10,6 +10,9 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  SafeAreaView,
+  Platform,
+  StatusBar
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +29,10 @@ import Animated, {
 import { useUser } from '@clerk/clerk-expo';
 
 const { width } = Dimensions.get('window');
+const HEADER_HEIGHT = Platform.OS === 'ios' ? 120 : 100;
+const HEADER_MAX_HEIGHT = 200;
+const HEADER_MIN_HEIGHT = Platform.OS === 'ios' ? 90 : 70;
+const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
@@ -110,17 +117,23 @@ export default function Home() {
   });
 
   const headerStyle = useAnimatedStyle(() => {
-    const height = interpolate(scrollY.value, [0, 100], [200, 120], 'clamp');
-    const opacity = interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp');
+    const height = interpolate(scrollY.value, [0, HEADER_SCROLL_DISTANCE], [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT], 'clamp');
+    const opacity = interpolate(scrollY.value, [0, HEADER_SCROLL_DISTANCE], [1, 0.9], 'clamp');
 
     return {
       height: withSpring(height, { damping: 20, stiffness: 90 }),
       opacity: withTiming(opacity, { duration: 150 }),
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1,
     };
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.SafeArea}>
+      <View style={styles.container}>
       <Animated.View style={[styles.header, headerStyle]}>
         <AnimatedBlurView
           tint="dark"
@@ -141,7 +154,8 @@ export default function Home() {
       </Animated.View>
 
       <Animated.ScrollView
-        style={styles.content}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
@@ -295,19 +309,33 @@ export default function Home() {
         </View>
       </Animated.ScrollView>
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  SafeArea: {
+    flex: 1,
+    backgroundColor: '#121212',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
   container: {
     flex: 1,
     backgroundColor: '#121212',
   },
   header: {
-    height: 200,
+    height: HEADER_MAX_HEIGHT,
     justifyContent: 'flex-end',
     paddingHorizontal: 24,
     paddingBottom: 24,
+    backgroundColor: '#121212',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    paddingTop: HEADER_MAX_HEIGHT, // Add padding to prevent content from being hidden under header
+    paddingBottom: 100,
   },
   headerContent: {
     gap: 20,
