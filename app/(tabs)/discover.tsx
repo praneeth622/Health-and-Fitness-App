@@ -24,6 +24,15 @@ const { width } = Dimensions.get('window');
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
+const sections = [
+  { name: 'Sleep', icon: 'moon', route: '/(pages)/sleep', description: 'Eat right, sleep tight' },
+  { name: 'Recipes', icon: 'restaurant', route: '/(pages)/recipes', description: 'Cook, eat, log, repeat' },
+  { name: 'Workouts', icon: 'barbell', route: '/(tabs)/workouts', description: 'Sweating is self-care' },
+  { name: 'Sync up', icon: 'link', route: '/(pages)/sync-up', description: 'Link apps & devices' },
+  { name: 'Friends', icon: 'people', route: '/(pages)/friends', description: 'Your support squad' },
+  { name: 'Community', icon: 'chatbubbles', route: '/(pages)/community', description: 'Food & fitness inspo' },
+];
+
 const groups = [
   {
     id: 1,
@@ -174,11 +183,31 @@ export default function Discover() {
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}>
+
+          {/* Quick Access Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Access</Text>
+          <View style={styles.quickAccessGrid}>
+            {sections.map((item, index) => (
+              <Animated.View key={item.name} entering={FadeInDown.delay(index * 100)}>
+                <TouchableOpacity
+                  style={styles.quickAccessCard}
+                  onPress={() => router.push(item.route)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name={item.icon} size={28} color="#4ADE80" style={styles.quickAccessIcon} />
+                  <Text style={styles.quickAccessName}>{item.name}</Text>
+                  <Text style={styles.quickAccessDescription}>{item.description}</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
+          </View>
+        </View>
         {/* Groups Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Popular Groups</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
+            <TouchableOpacity style={styles.seeAllButton} onPress={() => router.push('/(pages)/popular-groups')}>
               <Text style={styles.seeAllText}>See All</Text>
               <Ionicons name="arrow-forward" size={16} color="#4ADE80" />
             </TouchableOpacity>
@@ -281,6 +310,8 @@ export default function Discover() {
             </Animated.View>
           ))}
         </View>
+
+        
 
         {/* Top Influencers */}
         <View style={[styles.section, styles.lastSection]}>
@@ -563,5 +594,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-Medium',
     color: '#4ADE80',
+  },
+  quickAccessGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  quickAccessCard: {
+    width: (width - 64) / 2, // Accounts for padding and gap
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  quickAccessIcon: {
+    marginBottom: 12,
+  },
+  quickAccessName: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#fff',
+  },
+  quickAccessDescription: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    marginTop: 4,
   },
 });

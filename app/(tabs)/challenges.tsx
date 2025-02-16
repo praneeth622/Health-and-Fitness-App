@@ -38,6 +38,7 @@ interface PublicChallenge {
   image: string;
 }
 
+
 interface SponsoredChallenge {
   id: string;
   goal: string;
@@ -295,7 +296,7 @@ export default function Challenges() {
             <Animated.View
               key={challenge.id}
               entering={FadeInDown.delay(index * 100)}>
-              <TouchableOpacity style={styles.sponsoredCard}>
+              <TouchableOpacity style={styles.sponsoredCard} onPress={() => router.push('/(pages)/page-details')}>
                 <Image source={{ uri: challenge.image }} style={styles.sponsoredImage} />
                 <View style={styles.sponsoredInfo}>
                   <View>
