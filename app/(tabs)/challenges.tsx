@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import {
   View,
@@ -11,6 +11,8 @@ import {
   TextInput,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { db } from '../../FirebaseConfig';
+import { collection, getDocs } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   FadeInDown,
@@ -123,9 +125,19 @@ const personalChallenges = [
   },
 ];
 
+interface SponsoredChallenge {
+  id: string;
+  goal: string;
+  image: string;
+  title: string;
+  reward: string;
+  sponsor: string;
+}
+
 export default function Challenges() {
   const scrollY = useSharedValue(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sponsoredChallenges, setSponsoredChallenges] = useState<SponsoredChallenge[]>([]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -139,6 +151,30 @@ export default function Challenges() {
       opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp'),
     };
   });
+
+  useEffect(() => {
+    const fetchSponsoredChallenges = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "SponsoredChallenges"));
+        const challengesData: SponsoredChallenge[] = [];
+        querySnapshot.forEach((doc) => {
+          challengesData.push({
+            id: doc.id,
+            goal: doc.data().goal,
+            image: doc.data().image,
+            title: doc.data().name, // Note: Firestore field is 'name' but we use 'title'
+            reward: doc.data().reward,
+            sponsor: doc.data().sponsor
+          });
+        });
+        setSponsoredChallenges(challengesData);
+      } catch (error) {
+        console.error("Error fetching sponsored challenges:", error);
+      }
+    };
+  
+    fetchSponsoredChallenges();
+  }, []);
 
   return (
     <View style={styles.container}>
