@@ -23,7 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../FirebaseConfig';
-import { ChallengeDetails, Milestone, LeaderboardUser, Tip } from '../../types/challenge';
+import { ChallengeDetails, Milestone, LeaderboardUser, Tip, PublicChallenge, GroupChallenge } from '../../types/challenge';
 
 const { width } = Dimensions.get('window');
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
@@ -96,75 +96,64 @@ const tips: Tip[] = [
     icon: 'bed-outline',
   },
 ];
-
-export default function ChallengeDetailsPage() {
-  const { challengeId } = useLocalSearchParams();
-  const [challengeDetails, setChallengeDetails] = useState<ChallengeDetails | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  const scrollY = useSharedValue(0);
-
-  useEffect(() => {
-    const fetchChallengeDetails = async () => {
-      try {
-        const docRef = doc(db, "SponsoredChallenges", challengeId as string);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setChallengeDetails({
-            id: docSnap.id,
-            title: data.title,
-            sponsor: data.sponsor,
-            duration: data.duration,
-            participants: data.participants,
-            image: data.image,
-            description: data.description,
-            progress: data.progress,
-            currentDistance: data.currentDistance,
-            targetDistance: data.targetDistance,
-            daysLeft: data.daysLeft,
-            reward: data.reward,
-          } as ChallengeDetails);
-        } else {
-          console.log("No such challenge!");
+export default function GroupChallengeDetails() {
+    const { challengeId } = useLocalSearchParams();
+    const [challengeDetails, setChallengeDetails] = useState<GroupChallenge | null>(null);
+    const [isJoined, setIsJoined] = useState(false);
+    const scrollY = useSharedValue(0);
+  
+    useEffect(() => {
+      const fetchChallengeDetails = async () => {
+        try {
+          const docRef = doc(db, "GroupChallenges", challengeId as string);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setChallengeDetails({
+              id: docSnap.id,
+              title: data.name, // Changed from title to name
+              group: data.group,
+              members: data.members || [],
+              description: data.description,
+              duration: data.duration,
+              image: data.image
+            } as GroupChallenge);
+          } else {
+            console.log("No such challenge!");
+            router.back();
+          }
+        } catch (error) {
+          console.error("Error fetching challenge details:", error);
           router.back();
         }
-      } catch (error) {
-        console.error("Error fetching challenge details:", error);
-        router.back();
+      };
+  
+      if (challengeId) {
+        fetchChallengeDetails();
       }
-    };
-
-    if (challengeId) {
-      fetchChallengeDetails();
+    }, [challengeId]);
+  
+    const scrollHandler = useAnimatedScrollHandler({
+      onScroll: (event) => {
+        scrollY.value = event.contentOffset.y;
+      },
+    });
+  
+    const headerStyle = useAnimatedStyle(() => {
+      return {
+        height: interpolate(scrollY.value, [0, 100], [300, 200], 'clamp'),
+        opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp'),
+      };
+    });
+  
+    if (!challengeDetails) {
+      return (
+        <View style={styles.container}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      );
     }
-  }, [challengeId]);
-
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
-
-  const headerStyle = useAnimatedStyle(() => {
-    return {
-      height: interpolate(scrollY.value, [0, 100], [300, 200], 'clamp'),
-      opacity: interpolate(scrollY.value, [0, 100], [1, 0.9], 'clamp'),
-    };
-  });
-
-  const handleJoinChallenge = () => {
-    setIsJoined(true);
-  };
-
-  // Add loading state check
-  if (!challengeDetails) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -186,21 +175,19 @@ export default function ChallengeDetailsPage() {
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.sponsorText}>
-              Sponsored by {challengeDetails.sponsor}
-            </Text>
+            <Text style={styles.groupText}>{challengeDetails.group}</Text>
             <Text style={styles.headerTitle}>{challengeDetails.title}</Text>
             <View style={styles.headerStats}>
               <View style={styles.headerStat}>
-                <Ionicons name="time" size={16} color="#4ADE80" />
+                <Ionicons name="time-outline" size={16} color="#4ADE80" />
                 <Text style={styles.headerStatText}>
                   {challengeDetails.duration}
                 </Text>
               </View>
               <View style={styles.headerStat}>
-                <Ionicons name="people" size={16} color="#4ADE80" />
+                <Ionicons name="people-outline" size={16} color="#4ADE80" />
                 <Text style={styles.headerStatText}>
-                  {challengeDetails.participants} joined
+                  {challengeDetails.members.length} members
                 </Text>
               </View>
             </View>
@@ -241,10 +228,23 @@ export default function ChallengeDetailsPage() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About the Challenge</Text>
           <Text style={styles.description}>{challengeDetails.description}</Text>
-          <View style={styles.rewardContainer}>
-            <Ionicons name="gift" size={24} color="#FBBF24" />
-            <Text style={styles.rewardText}>{challengeDetails.reward}</Text>
-          </View>
+        </View>
+
+        {/* Members List */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Group Members</Text>
+          {challengeDetails.members.map((memberId, index) => (
+            <Animated.View
+              key={memberId}
+              entering={FadeInDown.delay(index * 100)}>
+              <View style={styles.memberCard}>
+                <View style={styles.memberAvatar}>
+                  <Ionicons name="person" size={24} color="#4ADE80" />
+                </View>
+                <Text style={styles.memberText}>{memberId}</Text>
+              </View>
+            </Animated.View>
+          ))}
         </View>
 
         {/* Milestones */}
@@ -322,16 +322,16 @@ export default function ChallengeDetailsPage() {
         </View>
       </Animated.ScrollView>
 
-      {/* Join Button */}
+      {/* Join Group Button */}
       <Animated.View
         entering={FadeInDown.delay(500)}
         style={styles.bottomContainer}>
         <TouchableOpacity
           style={[styles.joinButton, isJoined && styles.joinedButton]}
-          onPress={handleJoinChallenge}
+          onPress={() => setIsJoined(!isJoined)}
           disabled={isJoined}>
           <Text style={[styles.joinButtonText, isJoined && styles.joinedButtonText]}>
-            {isJoined ? 'Joined Challenge' : 'Join Challenge'}
+            {isJoined ? 'Joined Group' : 'Join Group'}
           </Text>
         </TouchableOpacity>
       </Animated.View>
@@ -601,5 +601,32 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
     marginTop: 20
-  }
+  },
+  groupText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#4ADE80',
+  },
+  memberCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  memberAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(74,222,128,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  memberText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#fff',
+  },
 });

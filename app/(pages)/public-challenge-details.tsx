@@ -23,7 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../FirebaseConfig';
-import { ChallengeDetails, Milestone, LeaderboardUser, Tip } from '../../types/challenge';
+import { ChallengeDetails, Milestone, LeaderboardUser, Tip, PublicChallenge } from '../../types/challenge';
 
 const { width } = Dimensions.get('window');
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
@@ -97,16 +97,16 @@ const tips: Tip[] = [
   },
 ];
 
-export default function ChallengeDetailsPage() {
-  const { challengeId } = useLocalSearchParams();
-  const [challengeDetails, setChallengeDetails] = useState<ChallengeDetails | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  const scrollY = useSharedValue(0);
+export default function PublicChallengeDetails() {
+    const { challengeId } = useLocalSearchParams();
+    const [challengeDetails, setChallengeDetails] = useState<PublicChallenge | null>(null);
+    const [isJoined, setIsJoined] = useState(false);
+    const scrollY = useSharedValue(0);
 
   useEffect(() => {
     const fetchChallengeDetails = async () => {
       try {
-        const docRef = doc(db, "SponsoredChallenges", challengeId as string);
+        const docRef = doc(db, "PublicChallenges", challengeId as string);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
@@ -124,7 +124,7 @@ export default function ChallengeDetailsPage() {
             targetDistance: data.targetDistance,
             daysLeft: data.daysLeft,
             reward: data.reward,
-          } as ChallengeDetails);
+          } as PublicChallenge);
         } else {
           console.log("No such challenge!");
           router.back();
