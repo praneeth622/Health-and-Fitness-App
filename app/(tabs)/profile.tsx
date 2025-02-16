@@ -1,26 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { useUser, useAuth } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { redeemReward } from '../../utils/rewards';
+import { Reward } from '../../types/reward';
+import { collection, doc, getDoc, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../FirebaseConfig';
 import * as Linking from 'expo-linking'
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  FadeInDown,
-  FadeInRight,
-  interpolate,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
-import { useClerk, useUser } from '@clerk/clerk-expo';
+import Animated, { FadeInDown, FadeInRight, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { PublicChallenge } from '@/types/challenge';
 
 const { width } = Dimensions.get('window');
 
@@ -31,60 +21,29 @@ const achievements = [
     id: 1,
     title: 'Step Master',
     description: 'Walked 100K steps in a month',
-    icon: 'footsteps',
+    icon: 'walk-outline' as const,
     color: '#4ADE80',
   },
   {
     id: 2,
     title: 'Workout Warrior',
     description: 'Completed 50 workouts',
-    icon: 'barbell',
+    icon: 'fitness-outline' as const,
     color: '#F472B6',
   },
   {
     id: 3,
     title: 'Marathon Champ',
     description: 'Finished a 10K run',
-    icon: 'trophy',
+    icon: 'trophy-outline' as const,
     color: '#FBBF24',
   },
   {
     id: 4,
     title: 'Healthy Eater',
     description: 'Logged meals for 30 days straight',
-    icon: 'nutrition',
+    icon: 'restaurant-outline' as const,
     color: '#60A5FA',
-  },
-];
-
-const activeChallenges = [
-  {
-    id: 1,
-    title: '100KM Cycling Challenge',
-    progress: 0.42,
-    image: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=800',
-  },
-  {
-    id: 2,
-    title: '30-Day Strength Challenge',
-    progress: 0.67,
-    image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800',
-  },
-];
-
-const completedChallenges = [
-  {
-    id: 1,
-    title: '5K Running Challenge',
-    badge: 'Gold',
-    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=800',
-  },
-  {
-    id: 2,
-    title: 'Clean Eating Challenge',
-    badge: 'Silver',
-    streak: 14,
-    image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800',
   },
 ];
 
@@ -109,10 +68,120 @@ const rewards = [
   },
 ];
 
+// Update the interface for PublicChallenge to match your schema
+interface PublicChallenge {
+  id: string;
+  title: string;
+  duration: string;
+  image: string;
+  members: string[];
+  participants: number;
+  progress: string;
+  rank: number;
+  reward: string;
+  sponsor: string;
+  updatedAt: string;
+}
+
+interface ActiveChallenge {
+  id: string;
+  title: string;
+  progress: number;
+  image: string;
+}
+
+interface CompletedChallenge {
+  id: string;
+  title: string;
+  badge: string;
+  streak?: number;
+  image: string;
+}
+
 export default function Profile() {
+  const { user } = useUser();
+  const { signOut } = useAuth();
+  const [userPoints, setUserPoints] = useState(0);
+  const [activeChallenges, setActiveChallenges] = useState<PublicChallenge[]>([]);
+  const [completedChallenges, setCompletedChallenges] = useState<CompletedChallenge[]>([]);
+  const [availableRewards, setAvailableRewards] = useState<Reward[]>([]);
   const scrollY = useSharedValue(0);
-  const {user} = useUser();
-  const { signOut } = useClerk()
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch user data and challenges
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchUserData = async () => {
+      setIsLoading(true);
+      try {
+        // Get user document
+        const userDoc = await getDoc(doc(db, 'Users', user.id));
+        
+        if (userDoc.exists()) {
+          // Set user points
+          setUserPoints(userDoc.data().earnedPoints || 0);
+          
+          // Get user's public challenges IDs
+          const userPublicChallenges = userDoc.data().publicChallenges || [];
+          
+          // Fetch all public challenges that user is enrolled in
+          const activeChallengesData = await Promise.all(
+            userPublicChallenges.map(async (challengeId: string) => {
+              const challengeDoc = await getDoc(doc(db, 'PublicChallenges', challengeId));
+              if (challengeDoc.exists()) {
+                const data = challengeDoc.data();
+                return {
+                  id: challengeDoc.id,
+                  title: data.title,
+                  duration: data.duration,
+                  image: data.image,
+                  members: data.members || [],
+                  participants: data.participants,
+                  progress: data.progress || '0',
+                  rank: data.rank || 0,
+                  reward: data.reward,
+                  sponsor: data.sponsor,
+                  updatedAt: data.updatedAt
+                } as PublicChallenge;
+              }
+              return null;
+            })
+          );
+
+          // Filter out any null values and set active challenges
+          setActiveChallenges(activeChallengesData.filter(Boolean) as PublicChallenge[]);
+
+          // Get completed challenges
+          const completedChallengesIds = userDoc.data().completedChallenges || [];
+          const completedData = await Promise.all(
+            completedChallengesIds.map(async (id: string) => {
+              const challengeDoc = await getDoc(doc(db, 'PublicChallenges', id));
+              if (challengeDoc.exists()) {
+                const data = challengeDoc.data();
+                return {
+                  id: challengeDoc.id,
+                  title: data.title,
+                  badge: 'Achievement',
+                  image: data.image,
+                  streak: data.streak || 0
+                };
+              }
+              return null;
+            })
+          );
+
+          setCompletedChallenges(completedData.filter(Boolean) as CompletedChallenge[]);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -135,6 +204,45 @@ export default function Profile() {
       console.error(JSON.stringify(err, null, 2))
     }
   }
+
+  const handleRedeemReward = async (reward: Reward) => {
+    if (!user) return;
+    
+    try {
+      const success = await redeemReward(user.id, reward.id, reward.pointsCost);
+      if (success) {
+        setUserPoints(prev => prev - reward.pointsCost);
+        Alert.alert(
+          'Success!',
+          `You have successfully redeemed ${reward.title}. Check your email for details.`
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to redeem reward. Please try again.');
+    }
+  };
+
+  // Add this component for no rewards
+  const NoRewardsCard = () => (
+    <View style={styles.noRewardsCard}>
+      <Ionicons name="star-outline" size={48} color="#4ADE80" />
+      <Text style={styles.noRewardsTitle}>No Rewards Available</Text>
+      <Text style={styles.noRewardsText}>
+        Complete challenges to earn points and unlock rewards!
+      </Text>
+    </View>
+  );
+
+  // Add this component for no challenges
+  const NoChallengesCard = () => (
+    <View style={styles.noChallengesCard}>
+      <Ionicons name="fitness-outline" size={48} color="#4ADE80" />
+      <Text style={styles.noChallengesTitle}>No Active Challenges</Text>
+      <Text style={styles.noChallengesText}>
+        Join public challenges to start your fitness journey!
+      </Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -172,7 +280,7 @@ export default function Profile() {
             </View>
           </View>
           <View style={styles.profileInfo}>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/(pages)/profile-setup')}>
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.editButton} onPress={handleSignOut}>
@@ -222,29 +330,37 @@ export default function Profile() {
               <Ionicons name="arrow-forward" size={16} color="#4ADE80" />
             </TouchableOpacity>
           </View>
-          {activeChallenges.map((challenge, index) => (
-            <Animated.View
-              key={challenge.id}
-              entering={FadeInDown.delay(index * 100)}>
-              <TouchableOpacity style={styles.challengeCard}>
-                <Image source={{ uri: challenge.image }} style={styles.challengeImage} />
-                <View style={styles.challengeInfo}>
-                  <Text style={styles.challengeTitle}>{challenge.title}</Text>
-                  <View style={styles.progressBar}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${challenge.progress * 100}%` },
-                      ]}
-                    />
+          {isLoading ? (
+            <ActivityIndicator color="#4ADE80" size="large" />
+          ) : activeChallenges.length === 0 ? (
+            <NoChallengesCard />
+          ) : (
+            activeChallenges.map((challenge, index) => (
+              <Animated.View
+                key={challenge.id}
+                entering={FadeInDown.delay(index * 100)}>
+                <TouchableOpacity 
+                  style={styles.challengeCard}
+                  onPress={() => router.push(`/(pages)/public-challenge-details?challengeId=${challenge.id}`)}>
+                  <Image source={{ uri: challenge.image }} style={styles.challengeImage} />
+                  <View style={styles.challengeInfo}>
+                    <Text style={styles.challengeTitle}>{challenge.title}</Text>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${parseFloat(challenge.progress) * 100}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.progressText}>
+                      {Math.round(parseFloat(challenge.progress) * 100)}% Complete
+                    </Text>
                   </View>
-                  <Text style={styles.progressText}>
-                    {Math.round(challenge.progress * 100)}% Complete
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
+                </TouchableOpacity>
+              </Animated.View>
+            ))
+          )}
         </View>
 
         {/* Completed Challenges */}
@@ -279,32 +395,45 @@ export default function Profile() {
         <View style={[styles.section, styles.lastSection]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Available Rewards</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
+            <TouchableOpacity 
+              style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>See All</Text>
-              <Ionicons name="arrow-forward" size={16} color="#4ADE80" />
+              <Ionicons name="chevron-forward" size={16} color="#4ADE80" />
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {rewards.map((reward, index) => (
-              <Animated.View
-                key={reward.id}
-                entering={FadeInRight.delay(index * 100)}>
-                <TouchableOpacity style={styles.rewardCard}>
-                  <Image source={{ uri: reward.image }} style={styles.rewardImage} />
-                  <View style={styles.rewardInfo}>
-                    <Text style={styles.rewardTitle}>{reward.title}</Text>
-                    <View style={styles.pointsContainer}>
-                      <Ionicons name="star" size={16} color="#FBBF24" />
-                      <Text style={styles.pointsText}>{reward.points} points</Text>
+          {availableRewards.length === 0 ? (
+            <NoRewardsCard />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {availableRewards.map((reward, index) => (
+                <Animated.View
+                  key={reward.id}
+                  entering={FadeInRight.delay(index * 100)}>
+                  <TouchableOpacity style={styles.rewardCard}>
+                    <Image source={{ uri: reward.image }} style={styles.rewardImage} />
+                    <View style={styles.rewardInfo}>
+                      <Text style={styles.rewardTitle}>{reward.title}</Text>
+                      <View style={styles.pointsContainer}>
+                        <Ionicons name="star" size={16} color="#FBBF24" />
+                        <Text style={styles.pointsText}>{reward.pointsCost} points</Text>
+                      </View>
+                      <TouchableOpacity 
+                        style={[
+                          styles.redeemButton,
+                          user?.earnedPoints < reward.pointsCost && styles.redeemButtonDisabled
+                        ]}
+                        disabled={user?.earnedPoints < reward.pointsCost}
+                        onPress={() => handleRedeemReward(reward)}>
+                        <Text style={styles.redeemButtonText}>
+                          {user?.earnedPoints < reward.pointsCost ? 'Not Enough Points' : 'Redeem'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.redeemButton}>
-                      <Text style={styles.redeemButtonText}>Redeem</Text>
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
-          </ScrollView>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+            </ScrollView>
+          )}
         </View>
       </Animated.ScrollView>
     </View>
@@ -569,5 +698,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Bold',
     color: '#121212',
+  },
+  redeemButtonDisabled: {
+    backgroundColor: 'rgba(74,222,128,0.3)',
+  },
+  noRewardsCard: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+  },
+  noRewardsTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#fff',
+  },
+  noRewardsText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+  },
+  noChallengesCard: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+  },
+  noChallengesTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#fff',
+  },
+  noChallengesText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
   },
 });
