@@ -63,7 +63,8 @@ const sponsoredChallenges = [
     sponsor: 'Adidas',
     reward: 'Win Adidas sports gear!',
     goal: 'Complete 100KM in 30 days',
-    image: 'https://images.unsplash.com/photo-1539794830467-1f1755804d13?w=800'
+    image: 'https://images.unsplash.com/photo-1539794830467-1f1755804d13?w=800',
+    // url:'/(pages)/page-details'
   },
   {
     id: 2,
@@ -244,7 +245,7 @@ export default function Challenges() {
             <Animated.View
               key={challenge.id}
               entering={FadeInDown.delay(index * 100)}>
-              <TouchableOpacity style={styles.sponsoredCard}>
+              <TouchableOpacity style={styles.sponsoredCard} onPress={() => router.push('/(pages)/page-details')}>
                 <Image source={{ uri: challenge.image }} style={styles.sponsoredImage} />
                 <View style={styles.sponsoredInfo}>
                   <View>
